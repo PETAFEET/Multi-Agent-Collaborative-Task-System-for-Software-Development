@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: multi-agent
+  name: multi-agent-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-agent-app
+  template:
+    metadata:
+      labels:
+        app: multi-agent-app
+    spec:
+      containers:
+        - name: app
+          image: multi_agent:latest
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: api-port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: MULTI_AGENT_HOST
+              value: "0.0.0.0"
+            - name: MULTI_AGENT_WORKERS_COUNT
+              value: "10"
+            - name: MULTI_AGENT_DB_HOST
+              value: "multi-agent-db-service"
+            - name: MULTI_AGENT_REDIS_HOST
+              value: "multi-agent-redis-service"
+          resources:
+            limits:
+              memory: "200Mi"
+              cpu: "100m"
+          ports:
+            - containerPort: 8000
+              name: api-port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: multi-agent
+  name: multi-agent-app-service
+spec:
+  selector:
+    app: multi-agent-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: api-port
+      name: api-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-agent-app
+  namespace: multi-agent
+  labels:
+    name: multi-agent-app
+spec:
+  rules:
+    - host: multi-agent.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: multi-agent-app-service
+                port:
+                  name: api-port
+
+---

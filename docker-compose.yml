@@ -1,0 +1,106 @@
+services:
+  api: &main_app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: multi_agent:${MULTI_AGENT_VERSION:-latest}
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rmq:
+        condition: service_healthy
+    environment:
+      MULTI_AGENT_HOST: 0.0.0.0
+      MULTI_AGENT_DB_HOST: multi_agent-db
+      MULTI_AGENT_DB_PORT: 5432
+      MULTI_AGENT_DB_USER: multi_agent
+      MULTI_AGENT_DB_PASS: multi_agent
+      MULTI_AGENT_DB_BASE: multi_agent
+      MULTI_AGENT_RABBIT_HOST: multi_agent-rmq
+      MULTI_AGENT_REDIS_HOST: multi_agent-redis
+
+  taskiq-worker:
+    <<: *main_app
+    labels: []
+    command:
+      - taskiq
+      - worker
+      - multi_agent.tkq:broker
+
+  db:
+    image: postgres:16.3-bullseye
+    hostname: multi_agent-db
+    environment:
+      POSTGRES_PASSWORD: "multi_agent"
+      POSTGRES_USER: "multi_agent"
+      POSTGRES_DB: "multi_agent"
+    volumes:
+      - multi_agent-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U multi_agent
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  # migrator:
+  #   image: multi_agent:${MULTI_AGENT_VERSION:-latest}
+  #   restart: "no"
+  #   command: alembic upgrade head
+  #   environment:
+  #     MULTI_AGENT_DB_HOST: multi_agent-db
+  #     MULTI_AGENT_DB_PORT: 5432
+  #     MULTI_AGENT_DB_USER: multi_agent
+  #     MULTI_AGENT_DB_PASS: multi_agent
+  #     MULTI_AGENT_DB_BASE: multi_agent
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+
+  migrator:
+    build: .
+    command: alembic upgrade head
+    environment:
+      MULTI_AGENT_DB_HOST: db
+      MULTI_AGENT_DB_PORT: 5432
+      MULTI_AGENT_DB_USER: multi_agent
+      MULTI_AGENT_DB_PASS: multi_agent
+      MULTI_AGENT_DB_BASE: multi_agent
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: bitnami/redis:latest
+    hostname: "multi_agent-redis"
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+  rmq:
+    image: rabbitmq:3.9.16-alpine
+    hostname: "multi_agent-rmq"
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    healthcheck:
+      test: rabbitmq-diagnostics check_running -q
+      interval: 3s
+      timeout: 3s
+      retries: 50
+
+volumes:
+  multi_agent-db-data:
+    name: multi_agent-db-data
