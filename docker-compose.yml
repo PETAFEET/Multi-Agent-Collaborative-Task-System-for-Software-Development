@@ -23,10 +23,13 @@ services:
       MULTI_AGENT_DB_BASE: multi_agent
       MULTI_AGENT_RABBIT_HOST: multi_agent-rmq
       MULTI_AGENT_REDIS_HOST: multi_agent-redis
+    ports:
+      - "8000:8000"
 
   taskiq-worker:
     <<: *main_app
     labels: []
+    ports: []
     command:
       - taskiq
       - worker
