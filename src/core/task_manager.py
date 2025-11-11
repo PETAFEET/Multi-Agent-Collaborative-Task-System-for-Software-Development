@@ -1,8 +1,14 @@
+
 """
 任务管理器
 
 负责任务的创建、调度、监控和管理
 """
+
+# Celery 实例定义
+from celery import Celery
+celery = Celery('task_manager', broker='redis://localhost:6379/0')
+
 
 import asyncio
 import uuid

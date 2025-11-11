@@ -5,6 +5,7 @@
 """
 
 import json
+import uuid
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -20,7 +21,10 @@ logger = get_logger(__name__)
 class PlannerAgent(BaseAgent):
     """规划智能体"""
     
-    def __init__(self, agent_id: str, llm: BaseLLM, **kwargs):
+    def __init__(self, agent_id: str, name: str, llm: BaseLLM, description: str = "", **kwargs):
+        # 从 kwargs 中移除可能冲突的参数
+        kwargs.pop('system_prompt', None)
+        
         capabilities = AgentCapabilities(
             can_plan=True,
             can_analyze_data=True,
@@ -45,8 +49,8 @@ class PlannerAgent(BaseAgent):
 
         super().__init__(
             agent_id=agent_id,
-            name="任务规划智能体",
-            description="负责复杂任务的分解和规划",
+            name=name,
+            description=description or "负责复杂任务的分解和规划",
             llm=llm,
             capabilities=capabilities,
             system_prompt=system_prompt,

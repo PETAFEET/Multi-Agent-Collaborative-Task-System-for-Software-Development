@@ -235,11 +235,15 @@ async def get_agents():
         
         agents = []
         for agent_id, status in agent_status.items():
+            # 修正 current_task 字段类型，确保为字符串
+            current_task = status["current_task"]
+            if isinstance(current_task, dict):
+                current_task = current_task.get("id", str(current_task))
             agents.append(AgentStatus(
                 agent_id=agent_id,
                 name=status["name"],
                 status=status["status"],
-                current_task=status["current_task"],
+                current_task=current_task,
                 task_count=status["task_count"]
             ))
         

@@ -21,6 +21,31 @@ from ..utils.logger import get_logger
 logger = get_logger(__name__)
 
 
+class CompatibleChatOpenAI(ChatOpenAI):
+    """兼容旧版API的ChatOpenAI包装类，移除max_completion_tokens参数"""
+    
+    def __init__(self, **kwargs):
+        """初始化，确保不使用max_completion_tokens"""
+        # 移除 max_completion_tokens，只使用 max_tokens
+        kwargs.pop('max_completion_tokens', None)
+        super().__init__(**kwargs)
+    
+    @property
+    def _default_params(self):
+        """覆盖默认参数，移除max_completion_tokens"""
+        params = super()._default_params.copy()
+        # 移除 max_completion_tokens 参数
+        params.pop('max_completion_tokens', None)
+        return params
+    
+    def _get_invocation_params(self, stop=None, **kwargs):
+        """覆盖调用参数，移除max_completion_tokens"""
+        params = super()._get_invocation_params(stop=stop, **kwargs)
+        # 移除 max_completion_tokens，只保留 max_tokens
+        params.pop('max_completion_tokens', None)
+        return params
+
+
 @dataclass
 class Task:
     """任务数据结构"""
@@ -160,12 +185,15 @@ class MultiAgentCoordinator:
         model = config.get("model", "gpt-3.5-turbo")
         
         if provider == "openai":
-            return ChatOpenAI(
+            # 使用兼容包装类，移除 max_completion_tokens 参数以兼容旧版 API
+            llm = CompatibleChatOpenAI(
                 model=model,
                 temperature=config.get("temperature", 0.7),
-                max_tokens=config.get("max_tokens", 1000),
-                api_key=self.config.get("models.providers.openai.api_key")
+                api_key=self.config.get("models.providers.openai.api_key"),
+                base_url=self.config.get("models.providers.openai.base_url"),
+                max_tokens=config.get("max_tokens", 1000)
             )
+            return llm
         elif provider == "anthropic":
             return ChatAnthropic(
                 model=model,

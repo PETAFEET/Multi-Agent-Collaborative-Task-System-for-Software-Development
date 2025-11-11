@@ -22,7 +22,10 @@ logger = get_logger(__name__)
 class BrowserAgent(BaseAgent):
     """浏览器操作智能体"""
     
-    def __init__(self, agent_id: str, llm: BaseLLM, **kwargs):
+    def __init__(self, agent_id: str, name: str, llm: BaseLLM, description: str = "", **kwargs):
+        # 从 kwargs 中移除可能冲突的参数
+        kwargs.pop('system_prompt', None)
+        
         capabilities = AgentCapabilities(
             can_browse=True,
             can_execute=True,
@@ -46,8 +49,8 @@ class BrowserAgent(BaseAgent):
 
         super().__init__(
             agent_id=agent_id,
-            name="浏览器操作智能体",
-            description="负责执行需要浏览器交互的任务",
+            name=name,
+            description=description or "负责执行需要浏览器交互的任务",
             llm=llm,
             capabilities=capabilities,
             system_prompt=system_prompt,
