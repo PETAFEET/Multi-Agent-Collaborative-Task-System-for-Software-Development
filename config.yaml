@@ -1,0 +1,184 @@
+# 多智能体协作系统配置文件
+
+# 系统基础配置
+system:
+  name: "Multi-Agent Collaboration System"
+  version: "1.0.0"
+  debug: true
+  log_level: "INFO"
+
+# 数据库配置
+database:
+  type: "sqlite" # sqlite, postgresql, mysql
+  url: "sqlite:///./multi_agent.db"
+  echo: false
+
+# Redis配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: null
+
+# 任务队列配置
+celery:
+  broker_url: "redis://localhost:6379/0"
+  result_backend: "redis://localhost:6379/0"
+  task_serializer: "json"
+  result_serializer: "json"
+  accept_content: ["json"]
+  timezone: "UTC"
+  enable_utc: true
+
+# AI模型配置
+models:
+  default_provider: "openai"
+  providers:
+    openai:
+      api_key: "sk-aG2vjdW9b7gqHZkEtrhVfimtCN6pBI7cU3DD5bblS9BZvv0o"
+      base_url: "https://api5.xhub.chat/v1"
+      models:
+        gpt-4: "gpt-4"
+        gpt-3.5-turbo: "gpt-3.5-turbo"
+
+    anthropic:
+      api_key: "${ANTHROPIC_API_KEY}"
+      base_url: "https://api.anthropic.com"
+      models:
+        claude-3-sonnet: "claude-3-sonnet-20240229"
+        claude-3-haiku: "claude-3-haiku-20240307"
+
+# 智能体配置
+agents:
+  planner:
+    name: "任务规划智能体"
+    model: "gpt-4"
+    provider: "openai"
+    temperature: 0.7
+    max_tokens: 2000
+    system_prompt: |
+      你是一个专业的任务规划智能体。你的职责是：
+      1. 分析用户输入的复杂任务
+      2. 将任务分解为多个可执行的子任务
+      3. 为每个子任务分配合适的智能体
+      4. 制定执行顺序和依赖关系
+      5. 监控任务执行进度并调整计划
+
+  executor:
+    name: "任务执行智能体"
+    model: "gpt-3.5-turbo"
+    provider: "openai"
+    temperature: 0.3
+    max_tokens: 1000
+    system_prompt: |
+      你是一个专业的任务执行智能体。你的职责是：
+      1. 接收并理解分配给你的子任务
+      2. 制定详细的执行步骤
+      3. 调用相应的工具和API完成任务
+      4. 生成结构化的执行结果
+      5. 向监督智能体报告执行状态
+
+  monitor:
+    name: "任务监督智能体"
+    model: "gpt-4"
+    provider: "openai"
+    temperature: 0.5
+    max_tokens: 1500
+    system_prompt: |
+      你是一个专业的任务监督智能体。你的职责是：
+      1. 监控所有智能体的执行状态
+      2. 检查任务执行质量和进度
+      3. 识别潜在问题和风险
+      4. 协调智能体之间的协作
+      5. 生成最终的综合报告
+
+  browser:
+    name: "浏览器操作智能体"
+    model: "gpt-4"
+    provider: "openai"
+    temperature: 0.2
+    max_tokens: 1000
+    system_prompt: |
+      你是一个专业的浏览器操作智能体。你的职责是：
+      1. 执行需要浏览器交互的任务
+      2. 自动化网页操作和数据提取
+      3. 处理复杂的用户界面交互
+      4. 生成操作截图和日志
+      5. 确保操作的安全性和稳定性
+
+# 任务类型配置
+task_types:
+  travel_planning:
+    name: "旅行规划"
+    description: "规划完整的旅行行程"
+    required_agents: ["planner", "executor", "monitor"]
+    optional_agents: ["browser"]
+    max_duration: 3600 # 秒
+
+  code_development:
+    name: "代码开发"
+    description: "开发完整的软件项目"
+    required_agents: ["planner", "executor", "monitor"]
+    optional_agents: ["browser"]
+    max_duration: 7200
+
+  research_report:
+    name: "研究报告"
+    description: "撰写专业的研究报告"
+    required_agents: ["planner", "executor", "monitor"]
+    optional_agents: ["browser"]
+    max_duration: 5400
+
+# MCP集成配置
+mcp:
+  enabled: true
+  servers:
+    file_system:
+      name: "文件系统服务器"
+      url: "mcp://localhost:3000"
+      enabled: true
+
+    web_search:
+      name: "网络搜索服务器"
+      url: "mcp://localhost:3001"
+      enabled: true
+
+    database:
+      name: "数据库服务器"
+      url: "mcp://localhost:3002"
+      enabled: false
+
+# 浏览器配置
+browser:
+  headless: false
+  timeout: 30
+  viewport:
+    width: 1920
+    height: 1080
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+# Web界面配置
+web:
+  host: "0.0.0.0"
+  port: 5000
+  debug: true
+  secret_key: "your-secret-key-here"
+  cors_origins: ["*"]
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} - {message}"
+  rotation: "1 day"
+  retention: "30 days"
+  compression: "zip"
+
+# 安全配置
+security:
+  api_key_required: false
+  rate_limit:
+    enabled: true
+    requests_per_minute: 60
+  cors:
+    enabled: true
+    origins: ["*"]
